@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atma_farm_app/models/subsidy_application_model.dart';
 import 'package:atma_farm_app/models/subsidy_scheme_model.dart';
 import 'package:atma_farm_app/services/wallet_service.dart';
+import 'package:atma_farm_app/screens/verification_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 
@@ -72,7 +73,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 const SizedBox(height: 12),
                 applications.isEmpty
                     ? const _EmptyStateCard(message: 'You have not applied for any schemes yet.')
-                    : Column(children: applications.map((app) => ApplicationStatusCard(application: app)).toList()),
+                    : Column(children: applications.map((app) => ApplicationStatusCard(application: app, onVerified: _refreshData)).toList()),
 
                 const SizedBox(height: 32),
 
@@ -178,10 +179,14 @@ class _SchemeCardState extends State<SchemeCard> {
 
 class ApplicationStatusCard extends StatelessWidget {
   final SubsidyApplication application;
-  const ApplicationStatusCard({super.key, required this.application});
+  final VoidCallback onVerified;
+
+  const ApplicationStatusCard({super.key, required this.application, required this.onVerified});
 
   @override
   Widget build(BuildContext context) {
+    final bool needsVerification = application.status == ApplicationStatus.applied;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -196,6 +201,26 @@ class ApplicationStatusCard extends StatelessWidget {
             Text('Applied on: ${DateFormat('dd MMMM yyyy').format(application.appliedAt.toDate())}'),
             const Divider(height: 24),
             _buildStatusTracker(application.status),
+            if (needsVerification) ...[
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Submit Proof'),
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (context) => VerificationScreen(applicationId: application.id),
+                      ),
+                    );
+                    if (result == true) {
+                      onVerified();
+                    }
+                  },
+                ),
+              )
+            ]
           ],
         ),
       ),
@@ -256,3 +281,4 @@ class _EmptyStateCard extends StatelessWidget {
     );
   }
 }
+
