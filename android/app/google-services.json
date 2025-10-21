@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "493354046889",
+    "project_id": "atma-palm-app-e2eb1",
+    "storage_bucket": "atma-palm-app-e2eb1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:493354046889:android:8d77c628b69ce23f74a0b8",
+        "android_client_info": {
+          "package_name": "com.example.atma_farm_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB28yd43S1v9cWtpAVf22Qkct3z2zphwZw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
