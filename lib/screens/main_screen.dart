@@ -3,6 +3,7 @@ import 'package:atma_farm_app/models/farm_model.dart';
 import 'package:atma_farm_app/screens/home_screen.dart';
 import 'package:atma_farm_app/screens/wallet_screen.dart';
 import 'package:atma_farm_app/screens/market_screen.dart';
+import 'package:atma_farm_app/screens/community_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MainScreen extends StatefulWidget {
@@ -23,9 +24,8 @@ class _MainScreenState extends State<MainScreen> {
     _screens = [
       HomeScreen(farm: widget.farm),
       const WalletScreen(),
-      // ** THE FIX IS HERE **
-      // We now pass the farm object to the MarketScreen as required.
-      MarketScreen(farm: widget.farm), 
+      MarketScreen(farm: widget.farm),
+      const CommunityScreen(), // Add the new CommunityScreen
     ];
   }
 
@@ -43,6 +43,7 @@ class _MainScreenState extends State<MainScreen> {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Ensures all labels are visible
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: Colors.green.shade800,
@@ -59,6 +60,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.shop),
             label: 'Market',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(FontAwesomeIcons.users), // Icon for community
+            label: 'Community',
           ),
         ],
       ),
