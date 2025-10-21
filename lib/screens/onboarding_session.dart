@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Import the farm pinpoint screen to navigate to it
 import 'package:atma_farm_app/screens/farm_pinpoint_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {

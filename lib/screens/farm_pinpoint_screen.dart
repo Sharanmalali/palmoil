@@ -1,9 +1,9 @@
-import 'package:atma_farm_app/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:atma_farm_app/screens/farm_details_screen.dart'; // Import the new details screen
 
 class FarmPinpointScreen extends StatefulWidget {
   const FarmPinpointScreen({super.key});
@@ -13,44 +13,56 @@ class FarmPinpointScreen extends StatefulWidget {
 }
 
 class _FarmPinpointScreenState extends State<FarmPinpointScreen> {
-  // Default camera position (center of India)
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(20.5937, 78.9629),
-    zoom: 4,
-  );
-
   GoogleMapController? _mapController;
   LatLng? _selectedLocation;
-  bool _isLoading = false;
+  LatLng _initialPosition = const LatLng(20.5937, 78.9629); // Default to India
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    _determinePosition();
   }
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          // Permissions are denied, we can't get the location.
-          return;
-        }
-      }
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
 
-      final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-      setState(() {
-        _selectedLocation = LatLng(position.latitude, position.longitude);
-      });
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(_selectedLocation!, 15),
-      );
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled.')));
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are denied')));
+        setState(() => _isLoading = false);
+        return;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied, we cannot request permissions.')));
+      setState(() => _isLoading = false);
+      return;
+    } 
+
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      if(mounted){
+        setState(() {
+          _initialPosition = LatLng(position.latitude, position.longitude);
+          _selectedLocation = _initialPosition;
+          _isLoading = false;
+        });
+        _mapController?.animateCamera(CameraUpdate.newLatLng(_initialPosition));
+      }
     } catch (e) {
-      // Handle error
-      print("Error getting location: $e");
+      if(mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -63,45 +75,41 @@ class _FarmPinpointScreenState extends State<FarmPinpointScreen> {
   Future<void> _saveFarmLocation() async {
     if (_selectedLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a location on the map.')),
+        const SnackBar(content: Text('Please select a location by tapping on the map.')),
       );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No user logged in.')));
+      setState(() => _isLoading = false);
+      return;
+    }
 
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final farmData = {
+      // Create a new document in the 'farms' collection
+      final newFarmDoc = await FirebaseFirestore.instance.collection('farms').add({
         'ownerUid': user.uid,
-        'farmName': "Gita's Main Plot", // Placeholder name for now
         'location': GeoPoint(_selectedLocation!.latitude, _selectedLocation!.longitude),
         'createdAt': FieldValue.serverTimestamp(),
-      };
+      });
 
-      // Create a new document in the 'farms' collection
-      await FirebaseFirestore.instance.collection('farms').add(farmData);
-      
-      if(mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-           (Route<dynamic> route) => false,
+      // Navigate to the FarmDetailsScreen, passing the ID of the new document
+      if(mounted){
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => FarmDetailsScreen(farmId: newFarmDoc.id),
+          ),
         );
       }
 
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save farm location: ${e.toString()}')),
-        );
-      }
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save location: $e')));
     } finally {
-       if (mounted) {
-         setState(() {
-           _isLoading = false;
-         });
+       if(mounted){
+        setState(() => _isLoading = false);
        }
     }
   }
@@ -109,11 +117,14 @@ class _FarmPinpointScreenState extends State<FarmPinpointScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pinpoint Your Farm'),
+      ),
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: _initialPosition,
             onMapCreated: (controller) => _mapController = controller,
+            initialCameraPosition: CameraPosition(target: _initialPosition, zoom: 12),
             onTap: _onMapTapped,
             markers: _selectedLocation == null
                 ? {}
@@ -124,37 +135,24 @@ class _FarmPinpointScreenState extends State<FarmPinpointScreen> {
                     ),
                   },
           ),
-          Positioned(
-            top: 50,
-            left: 16,
-            right: 16,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'Tap on the map to pinpoint your main farm',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ),
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator()),
           Positioned(
             bottom: 30,
-            left: 24,
-            right: 24,
-            child: _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: _saveFarmLocation,
-                  child: const Text('Confirm Location and Continue'),
-                ),
-          ),
+            left: 20,
+            right: 20,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.check),
+              label: const Text('Confirm Location and Continue'),
+              onPressed: _isLoading ? null : _saveFarmLocation,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+          )
         ],
       ),
     );
   }
 }
+
