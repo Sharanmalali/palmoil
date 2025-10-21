@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:atma_farm_app/screens/home_screen.dart';
+import 'package:atma_farm_app/screens/main_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:atma_farm_app/models/farm_model.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -47,20 +47,17 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
     try {
       final farmRef = FirebaseFirestore.instance.collection('farms').doc(widget.farmId);
       
-      // Update the document with all the new details
       await farmRef.update({
         'plantationDate': Timestamp.fromDate(_selectedDate!),
         'waterSource': _selectedWaterSource,
         'soilType': _selectedSoilType,
       });
 
-      // Fetch the complete, updated document
       final updatedFarmDoc = await farmRef.get();
       final farm = Farm.fromFirestore(updatedFarmDoc);
 
-      // Navigate to the home screen with the complete farm object
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => HomeScreen(farm: farm)),
+        MaterialPageRoute(builder: (context) => MainScreen(farm: farm)),
         (Route<dynamic> route) => false,
       );
 
@@ -112,8 +109,8 @@ class _FarmDetailsScreenState extends State<FarmDetailsScreen> {
             _buildSectionHeader('What is your primary water source?'),
             const SizedBox(height: 16),
             IconSelector(
-              options:  {
-                'Borewell': FontAwesomeIcons.boreHole, // Using a CJK character for a stylized well icon
+              options: const {
+                'Borewell': FontAwesomeIcons.boreHole,
                 'Canal': FontAwesomeIcons.water,
                 'Rainfed': FontAwesomeIcons.cloudRain,
               },
@@ -220,3 +217,4 @@ class IconSelector extends StatelessWidget {
     );
   }
 }
+
