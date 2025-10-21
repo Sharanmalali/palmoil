@@ -7,6 +7,7 @@ import 'package:atma_farm_app/models/weather_model.dart';
 import 'package:atma_farm_app/services/tasks_service.dart';
 import 'package:atma_farm_app/models/task_model.dart';
 import 'package:atma_farm_app/models/farm_model.dart';
+import 'package:atma_farm_app/screens/pest_scanner_screen.dart'; // Import the new screen
 
 class HomeScreen extends StatefulWidget {
   final Farm farm;
@@ -48,7 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final farmData = widget.farm;
       
-      // Correctly call the weather service with latitude and longitude
       _weatherData = await WeatherService().getWeather(farmData.location.latitude, farmData.location.longitude);
 
       if (farmData.plantationDate != null) {
@@ -78,7 +78,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () {
+          // This is the navigation logic to open the scanner
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const PestScannerScreen()),
+          );
+        },
         label: const Text('Scan for Problems'),
         icon: const Icon(Icons.camera_alt),
         backgroundColor: Colors.green.shade700,
