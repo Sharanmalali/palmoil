@@ -173,4 +173,3 @@ class PickupStatusCard extends StatelessWidget {
     }
   }
 }
-
