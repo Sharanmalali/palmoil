@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-// Import Firebase packages
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Import the new home screen we will create
-import 'package:atma_farm_app/screens/home_screen.dart';
+// Import the farm pinpoint screen to navigate to it
+import 'package:atma_farm_app/screens/farm_pinpoint_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,7 +18,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
 
   Future<void> _saveProfile() async {
-    // Validate the form
+    // Validate the form before proceeding
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -29,38 +28,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
 
     try {
-      // Get the current user from Firebase Auth
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        // This should not happen if the user has reached this screen
         throw Exception("No user is currently signed in.");
       }
 
-      // Prepare the data to be saved
       final userData = {
         'uid': user.uid,
         'phone': user.phoneNumber,
         'name': _nameController.text.trim(),
         'language': _selectedLanguage,
-        'role': 'farmer', // Default role for new users
-        'createdAt': FieldValue.serverTimestamp(), // Use server time
+        'role': 'farmer',
+        'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // Get a reference to the 'users' collection and set the document with the user's UID
+      // Save user data to Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set(userData);
 
-      // Navigate to the home screen on success, and remove all previous screens from the stack
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (Route<dynamic> route) => false,
+        // Navigate to the FarmPinpointScreen instead of the HomeScreen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const FarmPinpointScreen()),
         );
       }
     } catch (e) {
-      // Show an error message if something goes wrong
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -77,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     }
   }
-
+  
   @override
   void dispose() {
     _nameController.dispose();
@@ -129,7 +123,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 items: const [
                   DropdownMenuItem(value: 'en', child: Text('English')),
                   DropdownMenuItem(value: 'hi', child: Text('हिन्दी (Hindi)')),
-                  // Add other languages as needed
                 ],
                 onChanged: (value) {
                   setState(() {
