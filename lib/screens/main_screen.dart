@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:atma_farm_app/models/farm_model.dart';
 import 'package:atma_farm_app/screens/home_screen.dart';
-import 'package:atma_farm_app/screens/wallet_screen.dart'; // Import the new WalletScreen
+import 'package:atma_farm_app/screens/wallet_screen.dart';
+import 'package:atma_farm_app/screens/market_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MainScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // Define the screens that the bottom navigation bar will switch between
     _screens = [
-      HomeScreen(farm: widget.farm), // Our existing dashboard
-      const WalletScreen(),       // The real wallet screen from your Canvas
+      HomeScreen(farm: widget.farm),
+      const WalletScreen(),
+      // ** THE FIX IS HERE **
+      // We now pass the farm object to the MarketScreen as required.
+      MarketScreen(farm: widget.farm), 
     ];
   }
 
@@ -52,6 +55,10 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(FontAwesomeIcons.wallet),
             label: 'My Wallet',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(FontAwesomeIcons.shop),
+            label: 'Market',
           ),
         ],
       ),
