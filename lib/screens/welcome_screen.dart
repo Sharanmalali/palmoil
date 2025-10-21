@@ -1,5 +1,5 @@
-import 'package:atma_farm_app/screens/auth_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:atma_farm_app/screens/auth_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -8,7 +8,6 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Add a subtle gradient background for a better look
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -26,14 +25,22 @@ class WelcomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Placeholder for the App Logo
-                Icon(
-                  Icons.eco, // Using a simple leaf icon for now
-                  size: 100,
-                  color: Colors.green.shade800,
+                // ** THE CHANGE IS HERE **
+                // The placeholder Icon is replaced with your actual logo.
+                Image.asset(
+                  'assets/images/logo.png', // The path we defined in pubspec.yaml
+                  height: 120, // You can adjust the size as needed
+                  errorBuilder: (context, error, stackTrace) {
+                    // This will show a placeholder if the logo fails to load
+                    return const Icon(
+                      Icons.eco,
+                      size: 100,
+                      color: Colors.grey,
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
-                // App Name
+                
                 Text(
                   'Atma-Palm',
                   textAlign: TextAlign.center,
@@ -44,7 +51,7 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Tagline
+                
                 Text(
                   'Your Partner in Oil Palm Cultivation',
                   textAlign: TextAlign.center,
@@ -54,9 +61,8 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 64),
-                // Registration Button
+                
                 ElevatedButton(
-                  // When pressed, navigate to the AuthScreen
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -74,3 +80,4 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 }
+
