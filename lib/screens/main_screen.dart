@@ -4,6 +4,7 @@ import 'package:atma_farm_app/screens/home_screen.dart';
 import 'package:atma_farm_app/screens/wallet_screen.dart';
 import 'package:atma_farm_app/screens/market_screen.dart';
 import 'package:atma_farm_app/screens/community_screen.dart';
+import 'package:atma_farm_app/screens/ai_advisor_screen.dart'; // Import the new AI screen
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class MainScreen extends StatefulWidget {
@@ -25,7 +26,8 @@ class _MainScreenState extends State<MainScreen> {
       HomeScreen(farm: widget.farm),
       const WalletScreen(),
       MarketScreen(farm: widget.farm),
-      const CommunityScreen(), // Add the new CommunityScreen
+      const CommunityScreen(),
+      const AiAdvisorScreen(), // Add the new AI Advisor screen
     ];
   }
 
@@ -43,7 +45,8 @@ class _MainScreenState extends State<MainScreen> {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Ensures all labels are visible
+        // Use fixed type when there are more than 3 items to keep labels visible
+        type: BottomNavigationBarType.fixed, 
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: Colors.green.shade800,
@@ -62,8 +65,13 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Market',
           ),
           BottomNavigationBarItem(
-            icon: Icon(FontAwesomeIcons.users), // Icon for community
+            icon: Icon(FontAwesomeIcons.users),
             label: 'Community',
+          ),
+          // Add the 5th item for the AI Advisor
+          BottomNavigationBarItem(
+            icon: Icon(FontAwesomeIcons.brain), 
+            label: 'AI Advisor',
           ),
         ],
       ),
