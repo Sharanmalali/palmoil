@@ -273,7 +273,7 @@ class _GyanGangaSection extends StatelessWidget {
                 aspectRatio: 9 / 16,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: (const Color.fromARGB(51, 224, 224, 224)),
                     borderRadius: BorderRadius.circular(12),
                     image: const DecorationImage(
                       image: NetworkImage('https://placehold.co/270x480/a9a9a9/ffffff?text=Video'),
