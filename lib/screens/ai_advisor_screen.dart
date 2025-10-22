@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:atma_farm_app/models/chat_message_model.dart';
 import 'package:atma_farm_app/services/ai_advisor_service.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 
 class AiAdvisorScreen extends StatefulWidget {
   const AiAdvisorScreen({super.key});
@@ -16,48 +22,132 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
 
+  // Speech to Text
+  final SpeechToText _speechToText = SpeechToText();
+  bool _speechEnabled = false;
+  bool _isListening = false;
+
+  // Text to Speech
+  final FlutterTts _flutterTts = FlutterTts();
+  bool _ttsEnabled = true; // Assume TTS is enabled initially
+
   @override
   void initState() {
     super.initState();
-    // Add the initial greeting from the AI
-    _messages.add(ChatMessage(
+    _initSpeech();
+    _initTts();
+    // Add the initial greeting
+    final initialMessage = ChatMessage(
       text: "Namaste! I am your AI farming assistant. How can I help you with your oil palm cultivation today?",
       author: ChatAuthor.model,
-    ));
+    );
+    _messages.add(initialMessage);
+    // Speak the initial message
+    _speak(initialMessage.text);
   }
+
+  // Initialize Speech to Text
+  Future<void> _initSpeech() async {
+    try {
+      var micStatus = await Permission.microphone.request();
+      if(micStatus.isGranted){
+        _speechEnabled = await _speechToText.initialize(
+          onError: (error) => print('STT Error: $error'),
+          onStatus: (status) => print('STT Status: $status')
+        );
+      } else {
+         print("Microphone permission denied");
+         _speechEnabled = false;
+      }
+    } catch(e) {
+      print("Could not initialize SpeechToText: $e");
+      _speechEnabled = false;
+    }
+    setState(() {});
+  }
+
+  // Initialize Text to Speech
+  Future<void> _initTts() async {
+     // Basic setup, you might want language settings etc.
+    await _flutterTts.awaitSpeakCompletion(true);
+    // Set language (optional, defaults often work)
+    // Example: await _flutterTts.setLanguage("en-IN"); 
+  }
+
+  // Start listening for speech
+  void _startListening() async {
+    if (!_speechEnabled) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Speech recognition not available or permission denied.')),
+      );
+      return;
+    }
+    if (_isListening) return; // Prevent starting multiple times
+    
+    setState(() => _isListening = true);
+    _textController.clear(); // Clear text field when starting voice input
+
+    await _speechToText.listen(
+      onResult: _onSpeechResult,
+      listenFor: const Duration(seconds: 30), // Max listening duration
+      localeId: "en_IN", // Specify locale for better accuracy if needed
+      cancelOnError: true,
+      partialResults: true, // Show results as they come in
+      listenMode: ListenMode.confirmation, // Good for single commands/queries
+    );
+  }
+
+  // Called when speech recognition provides a result
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    setState(() {
+      _textController.text = result.recognizedWords;
+       // If final result, stop listening animation, but keep text
+      if (result.finalResult) {
+         _isListening = false;
+      }
+    });
+  }
+
+  // Stop listening for speech
+  void _stopListening() async {
+     if (!_isListening) return;
+    await _speechToText.stop();
+    setState(() => _isListening = false);
+  }
+
+  // Speak the given text using TTS
+  Future<void> _speak(String text) async {
+    if (_ttsEnabled) {
+      await _flutterTts.speak(text);
+    }
+  }
+
 
   Future<void> _sendMessage() async {
     if (_textController.text.trim().isEmpty) return;
+    if(_isListening) _stopListening(); // Stop listening if user hits send manually
 
     final messageText = _textController.text.trim();
     _textController.clear();
 
-    // Add user message to UI
     setState(() {
       _messages.add(ChatMessage(text: messageText, author: ChatAuthor.user));
       _isLoading = true;
     });
     _scrollToBottom();
 
-    // Create history for the API call
-    final history = _messages.map((m) {
-      return {
-        'author': m.author == ChatAuthor.user ? 'user' : 'model',
-        'text': m.text
-      };
-    }).toList();
-    // Remove the last message (the one we just added) from the history
+    final history = _messages.map((m) => {'author': m.author == ChatAuthor.user ? 'user' : 'model', 'text': m.text}).toList();
     history.removeLast();
 
-    // Send to Gemini and get response
     final response = await _advisorService.sendMessage(messageText, history);
 
-    // Add model response to UI
+    final modelMessage = ChatMessage(text: response, author: ChatAuthor.model);
     setState(() {
-      _messages.add(ChatMessage(text: response, author: ChatAuthor.model));
+      _messages.add(modelMessage);
       _isLoading = false;
     });
     _scrollToBottom();
+    await _speak(response); // Speak the response
   }
 
   void _scrollToBottom() {
@@ -73,10 +163,33 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    _speechToText.cancel(); // Clean up STT
+    _flutterTts.stop(); // Clean up TTS
+    super.dispose();
+  }
+
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Advisor'),
+        actions: [
+          // Add a toggle button for TTS on/off
+          IconButton(
+            icon: Icon(_ttsEnabled ? Icons.volume_up : Icons.volume_off),
+            tooltip: _ttsEnabled ? 'Mute Advisor' : 'Unmute Advisor',
+            onPressed: () {
+              setState(() {
+                _ttsEnabled = !_ttsEnabled;
+                if(!_ttsEnabled) _flutterTts.stop(); // Stop speaking if muted
+              });
+            },
+          )
+        ],
       ),
       body: Column(
         children: [
@@ -120,15 +233,23 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             Expanded(
               child: TextField(
                 controller: _textController,
-                decoration: const InputDecoration(
-                  hintText: 'Ask about farming...',
+                decoration: InputDecoration(
+                  hintText: _isListening ? 'Listening...' : 'Ask about farming...',
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 textCapitalization: TextCapitalization.sentences,
                 onSubmitted: (value) => _sendMessage(),
               ),
             ),
+            // Microphone button
+            IconButton(
+              icon: FaIcon(_isListening ? FontAwesomeIcons.stop : FontAwesomeIcons.microphone),
+              color: _isListening ? Colors.red : Theme.of(context).primaryColor,
+              tooltip: _isListening ? 'Stop listening' : 'Start voice input',
+              onPressed: _speechEnabled ? (_isListening ? _stopListening : _startListening) : null,
+            ),
+            // Send button
             IconButton(
               icon: Icon(Icons.send, color: Theme.of(context).primaryColor),
               onPressed: _isLoading ? null : _sendMessage,
@@ -161,3 +282,4 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     );
   }
 }
+
